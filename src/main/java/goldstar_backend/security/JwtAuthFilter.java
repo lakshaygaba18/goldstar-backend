@@ -44,6 +44,10 @@ public class JwtAuthFilter extends OncePerRequestFilter {
         String token = authHeader.substring(7);
         String subject = jwtService.extractSubject(token);
 
+        System.out.println("JWT Subject = " + subject);
+
+        Owner owner = ownerRepository.findByEmail(subject).orElse(null);
+        System.out.println("Owner = " + owner);
         // First, check if this token belongs to an OWNER (subject = email)
         Owner owner = ownerRepository.findByEmail(subject).orElse(null);
         if (owner != null) {
