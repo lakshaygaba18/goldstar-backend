@@ -6,6 +6,7 @@ import goldstar_backend.entity.Owner;
 import goldstar_backend.repository.OwnerRepository;
 import goldstar_backend.security.JwtService;
 import lombok.RequiredArgsConstructor;
+import goldstar_backend.dto.RegisterRequest;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -32,5 +33,21 @@ public class AuthService {
                 owner.getShopName(),
                 owner.getOwnerName()
         );
+    }
+    public void register(RegisterRequest request) {
+
+        if (ownerRepository.findByEmail(request.getEmail()).isPresent()) {
+            throw new RuntimeException("Email already registered");
+        }
+
+        Owner owner = Owner.builder()
+                .shopName(request.getShopName())
+                .ownerName(request.getOwnerName())
+                .email(request.getEmail())
+                .password(request.getPassword())
+                .phoneNumber(request.getPhoneNumber())
+                .build();
+
+        ownerRepository.save(owner);
     }
 }
