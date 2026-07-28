@@ -20,7 +20,7 @@ public class JwtAuthFilter extends OncePerRequestFilter {
 
     private final JwtService jwtService;
     private final WorkerRepository workerRepository;
-    private final OwnerRepository ownerRepository; // NEW
+    private final OwnerRepository ownerRepository;
 
     @Override
     protected void doFilterInternal(HttpServletRequest request,
@@ -30,38 +30,45 @@ public class JwtAuthFilter extends OncePerRequestFilter {
 
         String path = request.getRequestURI();
 
+        // Public endpoints
         if (path.contains("/login") || path.contains("/register")) {
             filterChain.doFilter(request, response);
             return;
         }
 
         String authHeader = request.getHeader("Authorization");
+
         if (authHeader == null || !authHeader.startsWith("Bearer ")) {
             filterChain.doFilter(request, response);
             return;
         }
 
         String token = authHeader.substring(7);
-        String subject = jwtService.extractSubject(token);
 
-        System.out.println("JWT Subject = " + subject);
+        String subject;
+        try {
+            subject = jwtService.extractSubject(token);
+        } catch (Exception e) {
+            response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+            response.getWriter().write("Invalid token");
+            return;
+        }
 
+        // OWNER TOKEN (subject = email)
         Owner owner = ownerRepository.findByEmail(subject).orElse(null);
-        System.out.println("Owner = " + owner);
-        // First, check if this token belongs to an OWNER (subject = email)
-        Owner owner = ownerRepository.findByEmail(subject).orElse(null);
+
         if (owner != null) {
             request.setAttribute("ownerId", owner.getId());
             filterChain.doFilter(request, response);
             return;
         }
 
-        // Otherwise, check if it's a WORKER token (subject = workerCode)
+        // WORKER TOKEN (subject = workerCode)
         Worker worker = workerRepository.findByWorkerCode(subject).orElse(null);
 
         if (worker == null || !worker.isActive()) {
             response.setStatus(HttpServletResponse.SC_FORBIDDEN);
-            response.getWriter().write("Access disabled or worker not found");
+            response.getWriter().write("Access denied");
             return;
         }
 
